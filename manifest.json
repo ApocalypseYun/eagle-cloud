@@ -7,9 +7,9 @@
   "keywords": ["sync", "cloud", "backup", "multi-device"],
   "platform": ["macOS", "Windows"],
   "devTools": true,
-  "main": "dist/background/index.js",
+  "main": "background/index.js",
   "window": {
-    "main": "dist/window/index.html",
+    "main": "window/index.html",
     "width": 800,
     "height": 600,
     "minWidth": 640,

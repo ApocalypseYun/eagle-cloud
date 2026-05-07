@@ -1,16 +1,16 @@
 {
   "name": "eagle-cloud-sync",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Multi-device cloud synchronization plugin for Eagle",
   "private": true,
   "engines": {
     "node": ">=16"
   },
   "scripts": {
-    "build": "esbuild src/background/index.ts --bundle --platform=node --target=node16 --outdir=dist/background && esbuild src/window/index.ts --bundle --platform=browser --target=chrome107 --outdir=dist/window && cp src/window/index.html src/window/styles.css dist/window/",
-    "dev": "esbuild src/background/index.ts --bundle --platform=node --target=node16 --outdir=dist/background --watch",
+    "build": "esbuild src/background/index.ts --bundle --platform=node --target=node16 --outdir=background && esbuild src/window/index.ts --bundle --platform=browser --target=chrome107 --outdir=window && cp src/window/index.html src/window/styles.css window/",
+    "dev": "esbuild src/background/index.ts --bundle --platform=node --target=node16 --outdir=background --watch",
     "package": "./scripts/package.sh",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf background window dist"
   },
   "devDependencies": {
     "esbuild": "^0.20.0",
