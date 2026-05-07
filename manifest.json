@@ -1,18 +1,18 @@
 {
   "id": "eagle-cloud-sync",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "name": "Eagle Cloud Sync",
   "description": "Multi-device cloud synchronization for Eagle libraries through pluggable storage backends",
   "logo": "/images/logo.png",
   "keywords": ["sync", "cloud", "backup", "multi-device"],
-  "platform": ["macOS", "Windows"],
-  "devTools": true,
-  "main": "background/index.js",
-  "window": {
-    "main": "window/index.html",
+  "main": {
+    "url": "window/index.html",
     "width": 800,
     "height": 600,
     "minWidth": 640,
-    "minHeight": 480
+    "minHeight": 480,
+    "resizable": true,
+    "frame": true,
+    "devTools": true
   }
 }
