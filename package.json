@@ -7,7 +7,7 @@
     "node": ">=16"
   },
   "scripts": {
-    "build": "esbuild src/background/index.ts --bundle --platform=node --target=node16 --outdir=background && esbuild src/window/index.ts --bundle --platform=browser --target=chrome107 --outdir=window && cp src/window/index.html src/window/styles.css window/",
+    "build": "esbuild src/background/index.ts --bundle --platform=node --target=node16 --outdir=background && esbuild src/window/index.ts --bundle --platform=node --target=node16 --outdir=window && cp src/window/index.html src/window/styles.css window/",
     "dev": "esbuild src/background/index.ts --bundle --platform=node --target=node16 --outdir=background --watch",
     "package": "./scripts/package.sh",
     "clean": "rm -rf background window dist"
