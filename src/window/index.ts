@@ -205,10 +205,12 @@ function bindEvents(): void {
 
       if (syncEnabled) {
         config.enabledLibraries = config.enabledLibraries.filter((p) => p !== libraryPath);
+        appendLog('info', '已停止当前库同步');
       } else {
         if (!config.enabledLibraries.includes(libraryPath)) {
           config.enabledLibraries = [...config.enabledLibraries, libraryPath];
         }
+        appendLog('info', `已启用库同步: ${(() => { try { return eagle.library.name; } catch { return libraryPath; } })()}`);
       }
       saveConfig(config);
       updateLibrarySyncUI();
@@ -223,6 +225,7 @@ function bindEvents(): void {
       const config = loadConfig();
       config.syncFolder = selectedSyncFolder;
       saveConfig(config);
+      appendLog('info', `同步目录已设置: ${selectedSyncFolder}`);
     });
   }
 
@@ -292,6 +295,101 @@ function bindEvents(): void {
   }
 }
 
+// --- Logging System ---
+
+const MAX_LOG_ENTRIES = 500;
+const LOG_POLL_MS = 1500;
+
+interface LogEntry {
+  time: string;
+  level: 'info' | 'warn' | 'error';
+  msg: string;
+}
+
+function getLogPath(): string {
+  return path.join(pluginPath, 'sync.log');
+}
+
+function appendLog(level: LogEntry['level'], msg: string): void {
+  const entry: LogEntry = {
+    time: new Date().toISOString(),
+    level,
+    msg,
+  };
+
+  let entries: LogEntry[] = [];
+  try {
+    const raw = fs.readFileSync(getLogPath(), 'utf-8');
+    entries = JSON.parse(raw);
+  } catch { /* first time or corrupt */ }
+
+  entries.push(entry);
+
+  // Rotate: keep only last MAX_LOG_ENTRIES
+  if (entries.length > MAX_LOG_ENTRIES) {
+    entries = entries.slice(entries.length - MAX_LOG_ENTRIES);
+  }
+
+  fs.writeFileSync(getLogPath(), JSON.stringify(entries), 'utf-8');
+}
+
+function readLogs(): LogEntry[] {
+  try {
+    const raw = fs.readFileSync(getLogPath(), 'utf-8');
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+function renderLogs(): void {
+  const container = $('logContainer');
+  const emptyMsg = $('logEmpty');
+  if (!container) return;
+
+  const entries = readLogs();
+
+  if (entries.length === 0) {
+    if (emptyMsg) emptyMsg.style.display = '';
+    return;
+  }
+
+  if (emptyMsg) emptyMsg.style.display = 'none';
+
+  // Rebuild log display
+  const fragment = document.createDocumentFragment();
+  for (const entry of entries.slice(-200)) {
+    const el = document.createElement('div');
+    el.className = 'log-entry';
+    el.dataset['level'] = entry.level;
+
+    const time = document.createElement('span');
+    time.className = 'log-timestamp';
+    time.textContent = entry.time.slice(11, 19);
+
+    const msg = document.createElement('span');
+    msg.className = 'log-message';
+    msg.textContent = entry.msg;
+
+    el.appendChild(time);
+    el.appendChild(msg);
+    fragment.appendChild(el);
+  }
+
+  // Replace all children except logEmpty
+  const existingEntries = container.querySelectorAll('.log-entry');
+  existingEntries.forEach((e) => e.remove());
+  container.appendChild(fragment);
+
+  // Auto-scroll
+  container.scrollTop = container.scrollHeight;
+}
+
+function startLogPolling(): void {
+  renderLogs();
+  setInterval(renderLogs, LOG_POLL_MS);
+}
+
 // --- Init ---
 
 function init(): void {
@@ -300,12 +398,28 @@ function init(): void {
   updateLibrarySyncUI();
   loadSettingsUI();
   bindEvents();
+  startLogPolling();
 
   // Update header status
   const headerStatusText = $('headerStatusText');
   const statusDot = $('statusDot');
   if (headerStatusText) headerStatusText.textContent = syncEnabled ? '已同步' : '等待配置';
   if (statusDot) statusDot.dataset['status'] = syncEnabled ? 'synced' : 'idle';
+
+  // Log plugin init
+  appendLog('info', '插件已启动');
+  appendLog('info', `当前库: ${(() => { try { return eagle.library.name; } catch { return '未知'; } })()}`);
+
+  const config = loadConfig();
+  if (config.syncFolder) {
+    appendLog('info', `同步目录: ${config.syncFolder}`);
+  } else {
+    appendLog('warn', '未配置同步目录，请在设置中选择');
+  }
+
+  if (syncEnabled) {
+    appendLog('info', '当前库同步已启用');
+  }
 }
 
 // Eagle provides plugin.path via onPluginCreate
