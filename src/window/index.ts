@@ -318,6 +318,51 @@ function bindEvents(): void {
     });
   }
 
+  // Browse folder button — manual directory selection
+  const browseFolderBtn = $('browseFolderBtn');
+  if (browseFolderBtn && syncFolderSelect) {
+    browseFolderBtn.addEventListener('click', async () => {
+      try {
+        const eagleRef = (globalThis as any).eagle;
+        // Eagle plugin API: show native folder picker dialog
+        const result = await eagleRef.dialog.showOpenDialog({
+          properties: ['openDirectory'],
+          title: '选择同步目录',
+          message: '请选择云盘同步空间的本地目录（如百度网盘同步空间）',
+        });
+
+        if (result && result.filePaths && result.filePaths.length > 0) {
+          const chosenPath = result.filePaths[0];
+
+          // Add to dropdown if not already there
+          let found = false;
+          for (let i = 0; i < syncFolderSelect.options.length; i++) {
+            if (syncFolderSelect.options[i]!.value === chosenPath) {
+              found = true;
+              break;
+            }
+          }
+          if (!found) {
+            const opt = document.createElement('option');
+            opt.value = chosenPath;
+            opt.textContent = chosenPath;
+            syncFolderSelect.appendChild(opt);
+          }
+
+          syncFolderSelect.value = chosenPath;
+          selectedSyncFolder = chosenPath;
+
+          const config = loadConfig();
+          config.syncFolder = chosenPath;
+          saveConfig(config);
+          appendLog('info', `手动设置同步目录: ${chosenPath}`);
+        }
+      } catch (err: any) {
+        appendLog('error', `选择目录失败: ${err.message || err}`);
+      }
+    });
+  }
+
   // Sync mode change
   const syncModeSelect = $('syncModeSelect') as HTMLSelectElement | null;
   const intervalGroup = $('intervalGroup');
