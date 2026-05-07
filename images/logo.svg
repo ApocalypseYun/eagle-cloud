@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <!-- Background circle -->
+  <circle cx="64" cy="64" r="60" fill="#7c3aed"/>
+
+  <!-- Cloud shape -->
+  <path d="M88 72c6.6 0 12-5.4 12-12 0-5.5-3.7-10.1-8.8-11.5C90.5 40.2 83.2 34 74.5 34c-7.3 0-13.6 4.3-16.5 10.5C56.2 43.5 54.2 43 52 43c-7.7 0-14 6.3-14 14 0 .7.1 1.3.1 2C33.6 60.5 30 65 30 70.5 30 77.4 35.6 83 42.5 83H88z" fill="white" opacity="0.95"/>
+
+  <!-- Sync arrows -->
+  <g fill="none" stroke="#7c3aed" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Arrow down-right -->
+    <path d="M52 62 l10 10 l-4 0"/>
+    <path d="M62 72 l0 -4"/>
+    <!-- Arrow up-left -->
+    <path d="M72 72 l-10 -10 l4 0"/>
+    <path d="M62 62 l0 4"/>
+  </g>
+
+  <!-- Small Eagle silhouette hint -->
+  <path d="M58 88 l6 -4 l6 4 l-3 0 l-3 3 l-3 -3z" fill="white" opacity="0.8"/>
+</svg>
