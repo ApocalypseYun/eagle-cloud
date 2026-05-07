@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eagle Cloud Sync</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-title">
+      <span class="status-dot" id="statusDot" data-status="idle"></span>
+      <span>Eagle Cloud Sync</span>
+    </div>
+    <span class="header-status-text" id="headerStatusText">未连接</span>
+  </header>
+
+  <!-- Tab Navigation -->
+  <nav class="tab-nav">
+    <button class="tab-btn active" data-tab="status">状态</button>
+    <button class="tab-btn" data-tab="settings">设置</button>
+    <button class="tab-btn" data-tab="log">日志</button>
+  </nav>
+
+  <!-- Tab Panels -->
+  <main class="tab-content">
+    <!-- Status Panel -->
+    <section class="tab-panel active" id="panel-status">
+      <div class="status-grid">
+        <div class="status-card">
+          <div class="status-card-label">上次同步</div>
+          <div class="status-card-value" id="lastSyncTime">--</div>
+        </div>
+        <div class="status-card">
+          <div class="status-card-label">已同步项目</div>
+          <div class="status-card-value" id="syncedCount">0</div>
+        </div>
+        <div class="status-card">
+          <div class="status-card-label">当前阶段</div>
+          <div class="status-card-value phase" id="currentPhase">空闲</div>
+        </div>
+        <div class="status-card">
+          <div class="status-card-label">待处理操作</div>
+          <div class="status-card-value" id="pendingOps">0</div>
+        </div>
+      </div>
+      <button class="sync-now-btn" id="syncNowBtn">立即同步</button>
+    </section>
+
+    <!-- Settings Panel -->
+    <section class="tab-panel" id="panel-settings">
+      <!-- Library Sync Toggle -->
+      <div class="settings-section">
+        <div class="settings-section-title">资源库同步</div>
+        <div class="form-group">
+          <div class="library-sync-row">
+            <div class="library-info">
+              <span class="library-name" id="currentLibraryName">--</span>
+              <span class="library-sync-badge" id="librarySyncBadge" data-enabled="false">未启用</span>
+            </div>
+            <button class="toggle-sync-btn" id="toggleSyncBtn">启用同步</button>
+          </div>
+          <div class="form-hint">启用后，当前库的元数据和缩略图将通过同步目录同步到其他设备。本地库文件不会被移动。</div>
+        </div>
+
+        <!-- Remote libraries discovered -->
+        <div class="form-group" id="remoteLibrariesGroup" style="display:none">
+          <label class="form-label">检测到的云端库</label>
+          <div class="remote-libraries-list" id="remoteLibrariesList"></div>
+        </div>
+      </div>
+
+      <!-- Storage backend -->
+      <div class="settings-section">
+        <div class="settings-section-title">同步目录</div>
+        <div class="form-group">
+          <label class="form-label" for="providerSelect">存储方式</label>
+          <select class="form-select" id="providerSelect">
+            <option value="local-directory">本地同步目录（推荐）</option>
+            <option value="baidupan">百度网盘 API</option>
+            <option value="webdav">WebDAV</option>
+            <option value="s3">S3 兼容</option>
+          </select>
+        </div>
+
+        <!-- Sync folder selection (for local-directory provider) -->
+        <div class="form-group" id="syncFolderGroup">
+          <label class="form-label">同步目录位置</label>
+          <div class="sync-folder-row">
+            <select class="form-select" id="syncFolderSelect">
+              <option value="">检测中...</option>
+            </select>
+            <button class="browse-btn" id="browseFolderBtn" title="手动选择目录">📁</button>
+          </div>
+          <div class="form-hint">插件将在选定目录下创建 EagleCloudSync/ 子目录存放同步数据</div>
+          <div class="detected-info" id="detectedInfo"></div>
+        </div>
+
+        <!-- BaiduPan Auth (shown only for baidupan API provider) -->
+        <div class="form-group" id="authGroup" style="display:none">
+          <label class="form-label">账号授权</label>
+          <div class="auth-section">
+            <div class="auth-status">
+              <span class="auth-status-dot" id="authDot"></span>
+              <span class="auth-status-text" id="authText">未授权</span>
+            </div>
+            <button class="auth-btn" id="authBtn">授权</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Device & Sync -->
+      <div class="settings-section">
+        <div class="settings-section-title">同步设置</div>
+        <div class="form-group">
+          <label class="form-label" for="deviceNameInput">设备名称</label>
+          <input class="form-input" type="text" id="deviceNameInput" placeholder="例如: MacBook-Work">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="syncModeSelect">同步模式</label>
+          <select class="form-select" id="syncModeSelect">
+            <option value="realtime">实时同步</option>
+            <option value="interval">定时同步</option>
+            <option value="manual">手动同步</option>
+          </select>
+          <div class="form-hint">实时模式下检测到变更后 5 秒内触发同步</div>
+        </div>
+
+        <div class="form-group interval-group" id="intervalGroup">
+          <label class="form-label" for="intervalInput">同步间隔 (秒)</label>
+          <input class="form-input" type="number" id="intervalInput" min="10" max="3600" value="60">
+        </div>
+
+        <div class="form-group">
+          <label class="form-checkbox">
+            <input type="checkbox" id="lazyPullCheck" checked>
+            <span class="checkbox-label">懒加载原始文件</span>
+          </label>
+          <div class="form-hint">仅同步元数据和缩略图，原始文件按需下载</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Log Panel -->
+    <section class="tab-panel" id="panel-log">
+      <div class="log-container" id="logContainer">
+        <div class="log-empty" id="logEmpty">暂无日志</div>
+      </div>
+    </section>
+  </main>
+
+  <script src="index.js"></script>
+</body>
+</html>
