@@ -13,34 +13,29 @@
 
 ## 安装
 
+### 普通用户
+
+1. 前往 [Releases](https://github.com/ApocalypseYun/eagle-cloud/releases) 下载最新版 `eagle-cloud-sync.eagleplugin`
+2. **双击** 下载的文件 → Eagle 自动弹出安装确认
+3. 点击"安装" → 完成 🎉
+
+> 也可以：打开 Eagle → 插件菜单 → 从本地文件安装 → 选择下载的 `.eagleplugin` 文件
+
 ### 前置要求
 
 - [Eagle](https://eagle.cool) 4.0+
-- Node.js 16+（仅开发时需要）
 - 至少安装一个同步盘客户端（百度网盘、坚果云、OneDrive 等）
 
-### 开发构建
+### 开发者
 
 ```bash
+git clone https://github.com/ApocalypseYun/eagle-cloud.git
 cd eagle-cloud
 npm install
 npm run build
-```
 
-### 安装到 Eagle
-
-1. 构建完成后，整个 `eagle-cloud/` 目录即为插件目录
-2. 打开 Eagle → 菜单 → **插件** → **开发者选项** → **从本地安装插件**
-3. 选择 `eagle-cloud/` 目录
-4. Eagle 重启后插件自动加载
-
-或手动安装：
-```bash
-# macOS
-cp -r eagle-cloud/ ~/Library/Application\ Support/Eagle/Plugins/eagle-cloud-sync/
-
-# Windows
-xcopy eagle-cloud\ %APPDATA%\Eagle\Plugins\eagle-cloud-sync\ /E /I
+# 打包为 .eagleplugin（可分发给他人）
+./scripts/package.sh
 ```
 
 ## 使用方式
