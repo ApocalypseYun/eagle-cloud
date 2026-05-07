@@ -7,6 +7,10 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
+// Import sync runner
+require('./sync-runner');
+const SyncRunner = (globalThis as any).__SyncRunner;
+
 // --- Eagle global type ---
 declare const eagle: {
   library: { name: string; path: string };
@@ -17,6 +21,7 @@ declare const eagle: {
 let pluginPath = '';
 let syncEnabled = false;
 let selectedSyncFolder = '';
+let syncRunner: any = null;
 
 // --- Config persistence ---
 
@@ -206,11 +211,13 @@ function bindEvents(): void {
       if (syncEnabled) {
         config.enabledLibraries = config.enabledLibraries.filter((p) => p !== libraryPath);
         appendLog('info', '已停止当前库同步');
+        stopSyncRunner();
       } else {
         if (!config.enabledLibraries.includes(libraryPath)) {
           config.enabledLibraries = [...config.enabledLibraries, libraryPath];
         }
         appendLog('info', `已启用库同步: ${(() => { try { return eagle.library.name; } catch { return libraryPath; } })()}`);
+        startSyncRunner(config);
       }
       saveConfig(config);
       updateLibrarySyncUI();
@@ -279,19 +286,97 @@ function bindEvents(): void {
   // Sync Now
   const syncNowBtn = $('syncNowBtn');
   if (syncNowBtn) {
-    syncNowBtn.addEventListener('click', () => {
-      if (!syncEnabled) {
+    syncNowBtn.addEventListener('click', async () => {
+      if (!syncEnabled || !syncRunner) {
         alert('请先启用当前库的同步');
         return;
       }
       syncNowBtn.textContent = '同步中...';
       (syncNowBtn as HTMLButtonElement).disabled = true;
-      // TODO: actual sync trigger
-      setTimeout(() => {
-        syncNowBtn.textContent = '立即同步';
-        (syncNowBtn as HTMLButtonElement).disabled = false;
-      }, 2000);
+      appendLog('info', '手动触发同步...');
+      try {
+        await syncRunner.triggerSync();
+        appendLog('info', '手动同步完成');
+      } catch (err: any) {
+        appendLog('error', `手动同步失败: ${err.message || err}`);
+      }
+      syncNowBtn.textContent = '立即同步';
+      (syncNowBtn as HTMLButtonElement).disabled = false;
+      updateStatusUI();
     });
+  }
+}
+
+// --- Sync Runner Control ---
+
+function deriveLibraryId(): string {
+  try {
+    const libPath = eagle.library.path;
+    const name = path.basename(libPath).replace(/\.library$/, '');
+    const hash = require('crypto').createHash('sha256').update(libPath).digest('hex').slice(0, 8);
+    return `${name}-${hash}`;
+  } catch {
+    return 'unknown-library';
+  }
+}
+
+function startSyncRunner(config: Config): void {
+  if (syncRunner) {
+    syncRunner.stop();
+    syncRunner = null;
+  }
+
+  if (!config.syncFolder) {
+    appendLog('warn', '无法启动同步: 未设置同步目录');
+    return;
+  }
+
+  const libraryId = deriveLibraryId();
+  const intervalMs = config.syncMode === 'realtime' ? 5000
+    : config.syncMode === 'interval' ? config.syncIntervalSec * 1000
+    : 0; // manual = no auto sync
+
+  syncRunner = new SyncRunner(config.syncFolder, libraryId, config.deviceName, appendLog);
+
+  if (config.syncMode === 'manual') {
+    // Just initialize, don't start auto loop
+    syncRunner.start(999999999).catch((err: any) => {
+      appendLog('error', `启动失败: ${err.message || err}`);
+    });
+  } else {
+    syncRunner.start(intervalMs).catch((err: any) => {
+      appendLog('error', `启动失败: ${err.message || err}`);
+    });
+  }
+}
+
+function stopSyncRunner(): void {
+  if (syncRunner) {
+    syncRunner.stop();
+    syncRunner = null;
+  }
+}
+
+function updateStatusUI(): void {
+  const lastSyncTime = $('lastSyncTime');
+  const syncedCount = $('syncedCount');
+  const currentPhase = $('currentPhase');
+  const headerStatusText = $('headerStatusText');
+  const statusDot = $('statusDot');
+
+  if (syncRunner) {
+    const status = syncRunner.getStatus();
+    if (lastSyncTime) lastSyncTime.textContent = status.lastSync > 0 ? new Date(status.lastSync).toLocaleTimeString('zh-CN') : '--';
+    if (syncedCount) syncedCount.textContent = String(status.synced);
+    if (currentPhase) currentPhase.textContent = status.running ? '运行中' : '空闲';
+    if (headerStatusText) headerStatusText.textContent = status.running ? '同步中' : '已同步';
+    if (statusDot) statusDot.dataset['status'] = status.running ? 'syncing' : 'synced';
+  } else {
+    if (lastSyncTime) lastSyncTime.textContent = '--';
+    if (syncedCount) syncedCount.textContent = '0';
+    if (currentPhase) currentPhase.textContent = '空闲';
+    if (headerStatusText) headerStatusText.textContent = '等待配置';
+    if (statusDot) statusDot.dataset['status'] = 'idle';
   }
 }
 
@@ -400,12 +485,6 @@ function init(): void {
   bindEvents();
   startLogPolling();
 
-  // Update header status
-  const headerStatusText = $('headerStatusText');
-  const statusDot = $('statusDot');
-  if (headerStatusText) headerStatusText.textContent = syncEnabled ? '已同步' : '等待配置';
-  if (statusDot) statusDot.dataset['status'] = syncEnabled ? 'synced' : 'idle';
-
   // Log plugin init
   appendLog('info', '插件已启动');
   appendLog('info', `当前库: ${(() => { try { return eagle.library.name; } catch { return '未知'; } })()}`);
@@ -417,9 +496,15 @@ function init(): void {
     appendLog('warn', '未配置同步目录，请在设置中选择');
   }
 
-  if (syncEnabled) {
-    appendLog('info', '当前库同步已启用');
+  // Auto-start sync if enabled
+  if (syncEnabled && config.syncFolder) {
+    appendLog('info', '自动启动同步引擎...');
+    startSyncRunner(config);
   }
+
+  // Periodic status update
+  updateStatusUI();
+  setInterval(updateStatusUI, 2000);
 }
 
 // Eagle provides plugin.path via onPluginCreate
