@@ -15,11 +15,11 @@
 
 ### 普通用户
 
-1. 前往 [Releases](https://github.com/ApocalypseYun/eagle-cloud/releases) 下载最新版 `eagle-cloud-sync.eagleplugin`
-2. **双击** 下载的文件 → Eagle 自动弹出安装确认
-3. 点击"安装" → 完成 🎉
+1. 前往 [Releases](https://github.com/ApocalypseYun/eagle-cloud/releases) 下载最新版 `eagle-cloud-sync.eagleplugin.zip`
+2. **解压** 得到 `eagle-cloud-sync.eagleplugin` 文件夹
+3. **双击** 该文件夹 → Eagle 自动弹出安装确认 → 点击"安装" → 完成 🎉
 
-> 也可以：打开 Eagle → 插件菜单 → 从本地文件安装 → 选择下载的 `.eagleplugin` 文件
+> 也可以：打开 Eagle → 插件菜单 → 从本地文件安装 → 选择解压后的 `.eagleplugin` 文件夹
 
 ### 前置要求
 
@@ -35,7 +35,7 @@ npm install
 npm run build
 
 # 打包为 .eagleplugin（可分发给他人）
-./scripts/package.sh
+npm run package
 ```
 
 ## 使用方式
