@@ -62,16 +62,87 @@ function saveConfig(config: Config): void {
 
 function detectSyncFolders(): Array<{ name: string; path: string }> {
   const home = os.homedir();
-  const candidates = [
-    { name: '百度网盘同步空间', path: path.join(home, 'BaiduNetdiskSync') },
-    { name: '百度网盘/同步空间', path: path.join(home, '百度网盘', '同步空间') },
-    { name: '坚果云', path: path.join(home, 'Nutstore Files') },
-    { name: 'OneDrive', path: path.join(home, 'OneDrive') },
-    { name: 'Dropbox', path: path.join(home, 'Dropbox') },
-    { name: 'iCloud Drive', path: path.join(home, 'Library', 'Mobile Documents', 'com~apple~CloudDocs') },
-  ];
+  const platform = os.platform();
 
+  const candidates: Array<{ name: string; path: string }> = [];
+
+  if (platform === 'darwin') {
+    // macOS paths
+    candidates.push(
+      // BaiduPan - multiple possible locations
+      { name: '百度网盘同步空间', path: path.join(home, 'BaiduNetdiskSync') },
+      { name: '百度网盘同步空间', path: path.join(home, '百度网盘同步空间') },
+      { name: '百度网盘同步空间', path: path.join(home, '百度网盘', '同步空间') },
+      { name: '百度网盘同步空间', path: path.join(home, 'Documents', 'BaiduNetdiskSync') },
+      { name: '百度网盘同步空间', path: path.join(home, 'Library', 'CloudStorage', 'BaiduNetdiskSync') },
+      // JianguoYun
+      { name: '坚果云', path: path.join(home, 'Nutstore Files') },
+      { name: '坚果云', path: path.join(home, 'Nutstore') },
+      // OneDrive
+      { name: 'OneDrive', path: path.join(home, 'OneDrive') },
+      { name: 'OneDrive', path: path.join(home, 'Library', 'CloudStorage', 'OneDrive-Personal') },
+      // Dropbox
+      { name: 'Dropbox', path: path.join(home, 'Dropbox') },
+      { name: 'Dropbox', path: path.join(home, 'Library', 'CloudStorage', 'Dropbox') },
+      // iCloud
+      { name: 'iCloud Drive', path: path.join(home, 'Library', 'Mobile Documents', 'com~apple~CloudDocs') },
+    );
+  } else if (platform === 'win32') {
+    // Windows paths
+    candidates.push(
+      // BaiduPan - Windows common locations
+      { name: '百度网盘同步空间', path: path.join(home, 'BaiduNetdiskSync') },
+      { name: '百度网盘同步空间', path: path.join(home, '百度网盘同步空间') },
+      { name: '百度网盘同步空间', path: path.join(home, '百度网盘', '同步空间') },
+      { name: '百度网盘同步空间', path: path.join('D:', '百度网盘同步空间') },
+      { name: '百度网盘同步空间', path: path.join('D:', 'BaiduNetdiskSync') },
+      { name: '百度网盘同步空间', path: path.join('E:', '百度网盘同步空间') },
+      { name: '百度网盘同步空间', path: path.join('E:', 'BaiduNetdiskSync') },
+      { name: '百度网盘同步空间', path: path.join(home, 'Documents', 'BaiduNetdiskSync') },
+      // JianguoYun
+      { name: '坚果云', path: path.join(home, 'Nutstore') },
+      { name: '坚果云', path: path.join(home, 'Nutstore Files') },
+      // OneDrive
+      { name: 'OneDrive', path: path.join(home, 'OneDrive') },
+      { name: 'OneDrive', path: path.join(home, 'OneDrive - Personal') },
+      // Dropbox
+      { name: 'Dropbox', path: path.join(home, 'Dropbox') },
+    );
+  } else {
+    // Linux
+    candidates.push(
+      { name: 'OneDrive', path: path.join(home, 'OneDrive') },
+      { name: 'Dropbox', path: path.join(home, 'Dropbox') },
+      { name: '坚果云', path: path.join(home, 'Nutstore Files') },
+    );
+  }
+
+  // Also try to find BaiduPan sync folder from its config file (macOS)
+  if (platform === 'darwin') {
+    try {
+      const configDir = path.join(home, 'Library', 'Application Support', 'com.baidu.BaiduNetdisk');
+      if (fs.existsSync(configDir)) {
+        // Look for sync folder path in plist or json configs
+        const files = fs.readdirSync(configDir);
+        for (const f of files) {
+          if (f.includes('sync') || f.includes('Sync')) {
+            const content = fs.readFileSync(path.join(configDir, f), 'utf-8');
+            // Try to extract path from content
+            const match = content.match(/"syncPath"\s*:\s*"([^"]+)"/);
+            if (match && match[1]) {
+              candidates.push({ name: '百度网盘同步空间 (配置)', path: match[1] });
+            }
+          }
+        }
+      }
+    } catch { /* best-effort */ }
+  }
+
+  // Deduplicate by path and filter to existing directories
+  const seen = new Set<string>();
   return candidates.filter((c) => {
+    if (seen.has(c.path)) return false;
+    seen.add(c.path);
     try {
       return fs.statSync(c.path).isDirectory();
     } catch {
