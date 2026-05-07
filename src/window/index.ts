@@ -127,19 +127,25 @@ function populateSyncFolders(): void {
   }
 
   // Select saved folder if present
-  const config = loadConfig();
-  if (config.syncFolder) {
-    select.value = config.syncFolder;
+  const savedConfig = loadConfig();
+  if (savedConfig.syncFolder) {
+    select.value = savedConfig.syncFolder;
     if (!select.value) {
       // Saved folder not in list, add it
       const opt = document.createElement('option');
-      opt.value = config.syncFolder;
-      opt.textContent = config.syncFolder;
+      opt.value = savedConfig.syncFolder;
+      opt.textContent = savedConfig.syncFolder;
       select.appendChild(opt);
-      select.value = config.syncFolder;
+      select.value = savedConfig.syncFolder;
     }
   }
   selectedSyncFolder = select.value;
+
+  // Auto-save first detected folder if config is empty
+  if (!savedConfig.syncFolder && selectedSyncFolder) {
+    savedConfig.syncFolder = selectedSyncFolder;
+    saveConfig(savedConfig);
+  }
 
   const detectedInfo = $('detectedInfo');
   if (detectedInfo && folders.length > 0) {
@@ -206,6 +212,11 @@ function bindEvents(): void {
       if (!config.syncFolder && !selectedSyncFolder) {
         alert('请先选择同步目录');
         return;
+      }
+
+      // Ensure syncFolder is saved
+      if (!config.syncFolder && selectedSyncFolder) {
+        config.syncFolder = selectedSyncFolder;
       }
 
       if (syncEnabled) {
@@ -510,5 +521,6 @@ function init(): void {
 // Eagle provides plugin.path via onPluginCreate
 eagle.onPluginCreate((plugin) => {
   pluginPath = plugin.path;
-  init();
+  // Delay init slightly — eagle.library may not be ready immediately
+  setTimeout(init, 300);
 });
