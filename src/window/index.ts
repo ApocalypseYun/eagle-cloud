@@ -436,14 +436,36 @@ function bindEvents(): void {
 
 // --- Sync Runner Control ---
 
-function deriveLibraryId(): string {
+/**
+ * Get or create a stable sync ID for the current Eagle library.
+ * Stored as `.eagle-sync-id` inside the .library folder itself.
+ * This ensures the same library has the same ID regardless of
+ * which computer or which path it lives on.
+ */
+function getOrCreateLibrarySyncId(): string {
   try {
     const libPath = eagle.library.path;
-    const name = path.basename(libPath).replace(/\.library$/, '');
-    const hash = require('crypto').createHash('sha256').update(libPath).digest('hex').slice(0, 8);
-    return `${name}-${hash}`;
+    const syncIdFile = path.join(libPath, '.eagle-sync-id');
+
+    // Try to read existing ID
+    try {
+      const existing = fs.readFileSync(syncIdFile, 'utf-8').trim();
+      if (existing && existing.length > 8) {
+        return existing;
+      }
+    } catch { /* file doesn't exist yet */ }
+
+    // Generate new UUID and persist it into the library folder
+    const crypto = require('crypto');
+    const newId = crypto.randomUUID();
+    fs.writeFileSync(syncIdFile, newId, 'utf-8');
+    appendLog('info', `为当前库生成同步 ID: ${newId}`);
+    return newId;
   } catch {
-    return 'unknown-library';
+    // Fallback: hash-based (won't cross-device, but won't crash)
+    const crypto = require('crypto');
+    const libPath = (() => { try { return eagle.library.path; } catch { return 'unknown'; } })();
+    return crypto.createHash('sha256').update(libPath).digest('hex').slice(0, 16);
   }
 }
 
@@ -458,7 +480,7 @@ function startSyncRunner(config: Config): void {
     return;
   }
 
-  const libraryId = deriveLibraryId();
+  const libraryId = getOrCreateLibrarySyncId();
   const intervalMs = config.syncMode === 'realtime' ? 5000
     : config.syncMode === 'interval' ? config.syncIntervalSec * 1000
     : 0; // manual = no auto sync
